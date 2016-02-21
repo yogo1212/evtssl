@@ -281,7 +281,6 @@ evt_ssl_t *evt_ssl_create(
 
 	essl->dns_base = NULL;
 
-	/* Create a new OpenSSL context */
 	essl->ssl_ctx = SSL_CTX_new(SSLv23_method());
 
 	if (!essl->ssl_ctx) {
