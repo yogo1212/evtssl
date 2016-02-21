@@ -120,11 +120,6 @@ static void ssleventcb(struct bufferevent *bev, short events, void *ctx)
 
 	if (events & BEV_EVENT_CONNECTED) {
 		event_add(sc->evt_in, NULL);
-		// TODO remove testing stuff (for gdb)
-		struct evbuffer *evb = evbuffer_new();
-		evbuffer_add_printf(evb, "GET / HTTP/1.1\r\nHost: www.google.de\r\n\r\n");
-		bufferevent_write_buffer(bev, evb);
-		evbuffer_free(evb);
 	}
 	else if (events & BEV_EVENT_ERROR) {
 		fprintf(stderr, "connection had an accident: %d\n", EVUTIL_SOCKET_ERROR());
