@@ -35,7 +35,7 @@ struct evt_ssl {
 
 	struct bufferevent *bev;
 
-	void *userptr;
+	void *ctx;
 	struct evdns_base *dns_base;
 	struct event_base *base;
 };
@@ -240,7 +240,7 @@ evt_ssl_t *evt_ssl_create(
 	struct event_base *base,
 	const char *hostname,
 	const int port,
-	void *userptr,
+	void *ctx,
 	evt_ssl_ssl_ctx_config configcb,
 	evt_ssl_error_cb_t errorcb
 )
@@ -277,7 +277,7 @@ evt_ssl_t *evt_ssl_create(
 
 	essl->ssl_ctx = NULL;
 	essl->bev = NULL;
-	essl->userptr = userptr;
+	essl->ctx = ctx;
 
 	essl->dns_base = NULL;
 
@@ -471,7 +471,7 @@ static void evt_ssl_collectSSLerr(evt_ssl_t *essl, const char *prefix)
 
 void *evt_ssl_get_ctx(evt_ssl_t *essl)
 {
-	return essl->userptr;
+	return essl->ctx;
 }
 
 char *evt_ssl_get_error_str(evt_ssl_t *essl)
