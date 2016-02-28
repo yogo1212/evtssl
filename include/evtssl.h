@@ -43,6 +43,9 @@ void evt_ssl_set_info_cb(evt_ssl_t *essl, evt_ssl_info_cb_t infocb);
 char *evt_ssl_get_error_str(evt_ssl_t *essl);
 void evt_ssl_dont_really_ssl(evt_ssl_t *essl);
 
+typedef void (*evt_ssl_accept_cb_t)(evt_ssl_t *essl, struct bufferevent *bev, struct sockaddr *addr, int addrlen);
+int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb);
+
 typedef struct bufferevent *(*build_connection_t)(void *state);
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl);
 

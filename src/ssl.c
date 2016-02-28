@@ -5,6 +5,7 @@
 
 #include <event2/bufferevent_ssl.h>
 #include <event2/dns.h>
+#include <event2/listener.h>
 
 #include "openssl_hostname_validation.h"
 
@@ -31,9 +32,12 @@ struct evt_ssl {
 
 	evt_ssl_info_cb_t infocb;
 
+	evt_ssl_accept_cb_t accept_cb;
+
 	SSL_CTX *ssl_ctx;
 
 	struct bufferevent *bev;
+	struct evconnlistener *evl;
 
 	void *ctx;
 	struct evdns_base *dns_base;
@@ -346,6 +350,7 @@ evt_ssl_t *evt_ssl_create(
 
 	essl->ssl_ctx = NULL;
 	essl->bev = NULL;
+	essl->evl = NULL;
 	essl->ctx = ctx;
 
 	essl->dns_base = NULL;
@@ -481,6 +486,10 @@ void evt_ssl_free(evt_ssl_t *essl)
 {
 	if (!essl) {
 		return;
+	}
+
+	if (essl->evl) {
+		evconnlistener_free(essl->evl);
 	}
 
 	if (essl->dns_base) {
