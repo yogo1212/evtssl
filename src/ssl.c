@@ -178,9 +178,78 @@ static void handle_openssl_error(const SSL *ssl, int type, int val)
 	}
 }
 
+static void acceptcb(
+                     struct evconnlistener *listener,
+                     int fd,
+                     struct sockaddr *addr, int addrlen,
+                     void *arg
+                    )
+{
+	(void) listener;
+
+	evt_ssl_t *essl = arg;
+
+	// TODO nagle?
+	//const int one = 1;
+	//setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof(one));
+
+	struct bufferevent *bev;
+	if (essl->dont_ssl) {
+		bev = bufferevent_socket_new(essl->base, fd, BEV_OPT_CLOSE_ON_FREE);
+	} else {
+		SSL *ssl;
+		ssl = SSL_new(essl->ssl_ctx);
+
+		if (ssl == NULL) {
+			evt_ssl_collectSSLerr(essl, "SSL_new");
+
+			if (evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION)) {
+				return;
+			}
+		}
+
+    SSL_set_ex_data(ssl, ex_data_index, essl);
+
+		bev = bufferevent_openssl_socket_new(essl->base, fd, ssl,
+	      BUFFEREVENT_SSL_ACCEPTING,
+	      BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+		bufferevent_openssl_set_allow_dirty_shutdown(essl->bev, 1);
+	}
+	essl->accept_cb(essl, bev, addr, addrlen);
+}
+
+int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb)
+{
+	essl->accept_cb = cb;
+
+	struct sockaddr_in6 sin;
+	memset(&sin, 0, sizeof(sin));
+	sin.sin6_family = AF_INET6;
+	sin.sin6_port = htons(essl->port);
+	sin.sin6_addr = in6addr_any;
+
+	// TODO if hostname != NULL set sin6_addr and maybe even check for ipv4?
+
+	essl->evl = evconnlistener_new_bind(
+	                        essl->base, acceptcb, essl,
+	                        LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE,
+	                        // TODO this might need to be configurable
+	                        -1,
+	                        (struct sockaddr *) &sin, sizeof(sin)
+	                       );
+
+	return evconnlistener_get_fd(essl->evl);
+}
+
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 {
 	if (essl->bev) {
+		return NULL;
+	}
+
+	if (essl->hostname[0] == '\0') {
+		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "empty hostname");
+		evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
 		return NULL;
 	}
 
@@ -262,12 +331,12 @@ evt_ssl_t *evt_ssl_create(
 
 	essl->infocb = NULL;
 
-	if ((hostname == NULL) || (hostname[0] == '\0')) {
-		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "empty hostname");
-		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
-		return NULL;
+	if (hostname != NULL) {
+		strncpy(essl->hostname, hostname, sizeof(essl->hostname));
 	}
-	strncpy(essl->hostname, hostname, sizeof(essl->hostname));
+	else {
+		essl->hostname[0] = '\0';
+	}
 	if (port == 0) {
 		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "port is zero");
 		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
