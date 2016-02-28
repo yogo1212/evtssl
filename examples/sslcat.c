@@ -194,7 +194,7 @@ static struct option options[] = {
 	{ NULL, 0, NULL, 0 }
 };
 
-// TODO option, arg, param... naming
+// TODO option, arg, param... naming?
 
 static bool parse_args(nc_opts_t *no, int argc, char *argv[])
 {
