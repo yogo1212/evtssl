@@ -18,6 +18,7 @@ typedef struct {
 	const char *key;
 	const char *cert;
 	bool nossl;
+	bool listen;
 } nc_opts_t;
 
 typedef struct {
@@ -174,6 +175,23 @@ static bool ssl_error_cb(evt_ssl_t *essl, evt_ssl_error_t error)
 	return false;
 }
 
+static void set_ssl_bev(sslcat_t *sc, struct bufferevent *bev)
+{
+	sc->ssl = bev;
+	bufferevent_setcb(bev, sslreadcb, NULL, ssleventcb, sc);
+	bufferevent_enable(bev, EV_READ | EV_WRITE);
+}
+
+static void accept_cb(evt_ssl_t *essl, struct bufferevent *bev, struct sockaddr *addr, int addrlen)
+{
+	(void) addr;
+	(void) addrlen;
+
+	sslcat_t *sc = evt_ssl_get_ctx(essl);
+
+	set_ssl_bev(sc, bev);
+}
+
 enum option_repr {
 	opt_host = 1,
 	opt_port,
@@ -182,6 +200,7 @@ enum option_repr {
 	opt_key,
 	opt_cert,
 	opt_nossl,
+	opt_listen,
 };
 static struct option options[] = {
 	{ "host", 1, NULL, opt_host },
@@ -191,6 +210,7 @@ static struct option options[] = {
 	{ "key", 1, NULL, opt_key },
 	{ "cert", 1, NULL, opt_cert },
 	{ "nossl", 0, NULL, opt_nossl },
+	{ "listen", 0, NULL, opt_listen },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -233,6 +253,9 @@ static bool parse_args(nc_opts_t *no, int argc, char *argv[])
 			break;
 		case opt_nossl:
 			no->nossl = true;
+			break;
+		case opt_listen:
+			no->listen = true;
 			break;
 		default:
 			fprintf(stderr, "getopt_long huh? (%d)\n", c);
@@ -309,9 +332,12 @@ int main(int argc, char *argv[])
 	// EV_READ is in order to receive close-events
 	sc.evt_out = event_new(sc.base, STDOUT_FILENO, EV_READ | EV_WRITE | EV_PERSIST, stdout_cb, &sc);
 
-	sc.ssl = evt_ssl_connect(sc.essl);
-	bufferevent_setcb(sc.ssl, sslreadcb, NULL, ssleventcb, &sc);
-	bufferevent_enable(sc.ssl, EV_READ | EV_WRITE);
+	if (sc.no.listen) {
+		evt_ssl_listen(sc.essl, accept_cb);
+	}
+	else {
+		set_ssl_bev(&sc, evt_ssl_connect(sc.essl));
+	}
 
 	sc.sig_event = evsignal_new(sc.base, SIGINT, handle_interrupt, sc.essl);
 
