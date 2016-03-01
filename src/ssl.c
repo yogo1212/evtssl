@@ -314,7 +314,7 @@ evt_ssl_t *evt_ssl_create(
 	const char *hostname,
 	const int port,
 	void *ctx,
-	evt_ssl_ssl_ctx_config configcb,
+	evt_ssl_ssl_ctx_config_cb_t configcb,
 	evt_ssl_error_cb_t errorcb
 )
 {

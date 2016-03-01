@@ -25,14 +25,14 @@ typedef enum {
 /* that's not the way to clean up (ha. ha.). */
 typedef bool (*evt_ssl_error_cb_t)(evt_ssl_t *essl, evt_ssl_error_t error);
 /* Return NULL if everything went ok or a string containing an error */
-typedef const char *(*evt_ssl_ssl_ctx_config)(evt_ssl_t *essl, SSL_CTX *ssl_ctx);
+typedef const char *(*evt_ssl_ssl_ctx_config_cb_t)(evt_ssl_t *essl, SSL_CTX *ssl_ctx);
 
 evt_ssl_t *evt_ssl_create(
 	struct event_base *base,
 	const char *hostname,
 	const int port,
 	void *userptr,
-	evt_ssl_ssl_ctx_config configcb,
+	evt_ssl_ssl_ctx_config_cb_t configcb,
 	evt_ssl_error_cb_t errorcb
 );
 void evt_ssl_free(evt_ssl_t *essl);
