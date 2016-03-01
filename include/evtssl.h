@@ -44,6 +44,7 @@ char *evt_ssl_get_error_str(evt_ssl_t *essl);
 void evt_ssl_dont_really_ssl(evt_ssl_t *essl);
 
 typedef void (*evt_ssl_accept_cb_t)(evt_ssl_t *essl, struct bufferevent *bev, struct sockaddr *addr, int addrlen);
+// TODO returns the FD that is being listened on
 int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb);
 
 typedef struct bufferevent *(*build_connection_t)(void *state);
