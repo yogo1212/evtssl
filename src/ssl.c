@@ -108,17 +108,27 @@ static bool default_ssl_info_handler(evt_ssl_t *essl, evt_ssl_error_t error)
 {
 	fprintf(stderr, "ERROR: ");
 
-	if (error == SSL_ERROR_INIT) {
-		fprintf(stderr, "SSL_INIT %s", evt_ssl_get_error_str(essl));
-	}
-	else if (error == SSL_ERROR_CONNECTION) {
-		fprintf(stderr, "SSL_CONNECTION %s", evt_ssl_get_error_str(essl));
-	}
-	else {
+	switch (error) {
+	case SSL_ERROR_INIT:
+		fprintf(stderr, "SSL_INIT");
+		break;
+	case SSL_ERROR_CONFIG:
+		fprintf(stderr, "SSL_INIT");
+		break;
+	case SSL_ERROR_DNS:
+		fprintf(stderr, "SSL_INIT");
+		break;
+	case SSL_ERROR_ALERT:
+		fprintf(stderr, "SSL_INIT");
+		break;
+	case SSL_ERROR_CONNECTION:
+		fprintf(stderr, "SSL_CONNECTION");
+		break;
+	default:
 		fprintf(stderr, "unknown error!!");
 	}
 
-	fprintf(stderr, "\n");
+	fprintf(stderr, " %s\n", evt_ssl_get_error_str(essl));
 	return true;
 }
 
