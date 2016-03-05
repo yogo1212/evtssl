@@ -104,7 +104,7 @@ static void ssl_dns_callback(int errcode, struct evutil_addrinfo *addr, void *pt
 	essl->bev = NULL;
 }
 
-static bool default_ssl_info_handler(evt_ssl_t *essl, evt_ssl_error_t error)
+static bool default_ssl_error_handler(evt_ssl_t *essl, evt_ssl_error_t error)
 {
 	fprintf(stderr, "ERROR: ");
 
@@ -340,7 +340,7 @@ evt_ssl_t *evt_ssl_create(
 		essl->errorcb = errorcb;
 	}
 	else {
-		essl->errorcb = default_ssl_info_handler;
+		essl->errorcb = default_ssl_error_handler;
 	}
 
 	essl->infocb = NULL;
