@@ -226,7 +226,7 @@ static void acceptcb(
 		bev = bufferevent_openssl_socket_new(essl->base, fd, ssl,
 	      BUFFEREVENT_SSL_ACCEPTING,
 	      BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-		bufferevent_openssl_set_allow_dirty_shutdown(essl->bev, 1);
+		bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
 	}
 	essl->accept_cb(essl, bev, addr, addrlen);
 }
