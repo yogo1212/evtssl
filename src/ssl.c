@@ -217,9 +217,8 @@ static void acceptcb(
 		if (ssl == NULL) {
 			evt_ssl_collectSSLerr(essl, "SSL_new");
 
-			if (evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION)) {
-				return;
-			}
+			evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
+			return;
 		}
 
     SSL_set_ex_data(ssl, ex_data_index, essl);
