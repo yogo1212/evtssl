@@ -214,6 +214,25 @@ static struct option options[] = {
 	{ NULL, 0, NULL, 0 }
 };
 
+static void print_help(void)
+{
+	struct option *opt = &options[0];
+	while (opt->name) {
+		fputs("--", stdout);
+		fputs(opt->name, stdout);
+		if (opt->has_arg > 0) {
+			fputs(" ", stdout);
+			if (opt->has_arg > 1)
+				fputs("[", stdout);
+			fputs("arg", stdout);
+			if (opt->has_arg > 1)
+				fputs("]", stdout);
+		}
+		puts("");
+		opt++;
+	}
+}
+
 // TODO option, arg, param... naming?
 
 static bool parse_args(nc_opts_t *no, int argc, char *argv[])
@@ -297,6 +316,11 @@ static const char *config_ssl(evt_ssl_t *essl, SSL_CTX *ssl_ctx)
 
 int main(int argc, char *argv[])
 {
+	if (argc == 1) {
+		print_help();
+		return EXIT_SUCCESS;
+	}
+
 	sslcat_t sc;
 	sc.base = get_fd_rdy_event_base();
 
