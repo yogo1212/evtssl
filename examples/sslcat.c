@@ -378,5 +378,5 @@ int main(int argc, char *argv[])
 
 	event_base_free(sc.base);
 
-	return 0;
+	return EXIT_SUCCESS;
 }
