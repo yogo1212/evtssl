@@ -372,6 +372,7 @@ evt_ssl_t *evt_ssl_create(
 		evt_ssl_collectSSLerr(essl, "CTX_new");
 
 		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		evt_ssl_free(essl);
 		return NULL;
 	}
 
