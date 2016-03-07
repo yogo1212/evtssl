@@ -376,6 +376,8 @@ evt_ssl_t *evt_ssl_create(
 		return NULL;
 	}
 
+	SSL_CTX_set_info_callback(essl->ssl_ctx, handle_openssl_error);
+
 	/*
 	 * This does default checks AND checks whether the certificate
 	 * is actually for the host we're connecting to.
@@ -395,8 +397,6 @@ evt_ssl_t *evt_ssl_create(
 			return NULL;
 		}
 	}
-
-	SSL_CTX_set_info_callback(essl->ssl_ctx, handle_openssl_error);
 
 	return essl;
 }
