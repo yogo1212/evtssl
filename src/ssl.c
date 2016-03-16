@@ -543,7 +543,7 @@ static int libevent_ssl_SSL_error_cb(const char *str, size_t len, void *u)
 
 static void evt_ssl_collectSSLerr(evt_ssl_t *essl, const char *prefix)
 {
-	if (essl->errorlen >= strlen(prefix)) {
+	if ((sizeof(essl->error) - essl->errorlen) <= strlen(prefix)) {
 		essl->errorlen = sizeof(essl->error) - 1;
 	}
 	else {
