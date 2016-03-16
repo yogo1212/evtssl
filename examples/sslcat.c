@@ -44,14 +44,16 @@ static void stdout_cb(evutil_socket_t fd, short events, void *ctx)
 	uint8_t buf[512];
 	if (events & EV_READ) {
 		rlen = read(fd, buf, sizeof(buf));
+		// so, from time to time this callback just runs EAGAIN
+		// sometimes there's even data!! wtf? bricks where shat
 		if (rlen == 0) {
 			fprintf(stderr, "stdout was closed\n");
+			goto ouch_fd;
 		}
-		else {
-			fprintf(stderr, "stdout ouched (%zd): %s\n", rlen, strerror(errno));
+		else if ((rlen == -1) && wnjb(errno)) {
+			fprintf(stderr, "stdout ouched (%zd,%d): %s\n", rlen, errno, strerror(errno));
+			goto ouch_fd;
 		}
-		close(fd);
-		goto ouch;
 	}
 
 	ssize_t wlen;
@@ -74,6 +76,9 @@ static void stdout_cb(evutil_socket_t fd, short events, void *ctx)
 		event_add(sc->evt_out, NULL);
 
 	return;
+ouch_fd:
+	close(fd);
+
 ouch:
 	event_free(sc->evt_in);
 	sc->evt_in = NULL;
