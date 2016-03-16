@@ -331,15 +331,19 @@ int main(int argc, char *argv[])
 	}
 
 	sslcat_t sc;
-	sc.base = get_fd_rdy_event_base();
 
-	if (!sc.base) {
-		fprintf(stderr, "no evbase.. aborting\n");
-		return -1;
+	if (!parse_args(&sc.no, argc, argv)) {
+		fprintf(stderr, "couldn't parse args\n");
+		return EXIT_FAILURE;
 	}
 
-	if (!parse_args(&sc.no, argc, argv))
+	int res = EXIT_SUCCESS;
+
+	sc.base = get_fd_rdy_event_base();
+	if (!sc.base) {
+		fprintf(stderr, "no evbase.. aborting\n");
 		return EXIT_FAILURE;
+	}
 
 	sc.essl = evt_ssl_create(
 	       	sc.base,
@@ -352,7 +356,8 @@ int main(int argc, char *argv[])
 
 	if (!sc.essl) {
 		fprintf(stderr, "failed to init essl\n");
-		return -1;
+		res = EXIT_FAILURE;
+		goto base_cleanup;
 	}
 
 	if (sc.no.nossl)
@@ -365,8 +370,12 @@ int main(int argc, char *argv[])
 	// EV_READ is in order to receive close-events
 	sc.evt_out = event_new(sc.base, STDOUT_FILENO, EV_READ | EV_WRITE | EV_PERSIST, stdout_cb, &sc);
 
+	sc.ssl = NULL;
 	if (sc.no.listen) {
-		evt_ssl_listen(sc.essl, accept_cb);
+		if (evt_ssl_listen(sc.essl, accept_cb) == -1) {
+			res = EXIT_FAILURE;
+			goto past_loop;
+		}
 	}
 	else {
 		set_ssl_bev(&sc, evt_ssl_connect(sc.essl));
@@ -378,14 +387,17 @@ int main(int argc, char *argv[])
 	event_base_dispatch(sc.base);
 	event_free(sc.sig_event);
 
-	bufferevent_free(sc.ssl);
+	if (sc.ssl)
+		bufferevent_free(sc.ssl);
 
+past_loop:
 	event_free(sc.evt_out);
 	event_free(sc.evt_in);
 
 	evt_ssl_free(sc.essl);
 
+base_cleanup:
 	event_base_free(sc.base);
 
-	return EXIT_SUCCESS;
+	return res;
 }
