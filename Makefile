@@ -98,7 +98,6 @@ install_lib: $(LIBBIN).$(VERSION)
 install_headers: $(LIBHEADERS)
 	mkdir -p $(HEADERINSTALLDIR)
 	install $(LIBHEADERS) $(HEADERINSTALLDIR)
-	#TODO remove $(HEADERINSTALLDIR) if empty
 
 install_examples: $(EXBINS)
 	mkdir -p $(EXAMPLESINSTALLDIR)
