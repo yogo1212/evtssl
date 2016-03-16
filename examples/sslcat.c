@@ -170,7 +170,11 @@ static struct event_base *get_fd_rdy_event_base(void)
 
 static bool ssl_error_cb(evt_ssl_t *essl, evt_ssl_error_t error)
 {
+	sslcat_t *sc = evt_ssl_get_ctx(essl);
+
 	fprintf(stderr, "ssl error(%d): %s\n", error, evt_ssl_get_error_str(essl));
+
+	event_base_loopbreak(sc->base);
 
 	return false;
 }
