@@ -372,7 +372,7 @@ int main(int argc, char *argv[])
 		set_ssl_bev(&sc, evt_ssl_connect(sc.essl));
 	}
 
-	sc.sig_event = evsignal_new(sc.base, SIGINT, handle_interrupt, sc.essl);
+	sc.sig_event = evsignal_new(sc.base, SIGINT, handle_interrupt, &sc);
 
 	event_add(sc.sig_event, NULL);
 	event_base_dispatch(sc.base);
