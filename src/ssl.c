@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <unistd.h>
 
 #include <openssl/err.h>
 #include <openssl/x509.h>
@@ -37,7 +38,9 @@ struct evt_ssl {
 	SSL_CTX *ssl_ctx;
 
 	struct bufferevent *bev;
+
 	struct evconnlistener *evl;
+	int listen_fd;
 
 	void *ctx;
 	struct evdns_base *dns_base;
@@ -237,6 +240,18 @@ int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb)
 {
 	essl->accept_cb = cb;
 
+	if (essl->evl) {
+		// TODO what do when already listening? that listener could be broken
+		return -1;
+	}
+
+	essl->listen_fd = socket(AF_INET6, SOCK_STREAM | SOCK_NONBLOCK, 0);
+	if (essl->listen_fd == -1) {
+		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "socket: %s", strerror(errno));
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		return -1;
+	}
+
 	struct sockaddr_in6 sin;
 	memset(&sin, 0, sizeof(sin));
 	sin.sin6_family = AF_INET6;
@@ -244,16 +259,29 @@ int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb)
 	sin.sin6_addr = in6addr_any;
 
 	// TODO if hostname != NULL set sin6_addr and maybe even check for ipv4?
+	if (bind(essl->listen_fd, (struct sockaddr *) &sin, sizeof(sin)) == -1) {
+		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "bind: %s", strerror(errno));
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		goto cleanup_sock;
+	}
 
-	essl->evl = evconnlistener_new_bind(
+	essl->evl = evconnlistener_new(
 	                        essl->base, acceptcb, essl,
 	                        LEV_OPT_CLOSE_ON_FREE | LEV_OPT_REUSEABLE,
 	                        // TODO this might need to be configurable
 	                        -1,
-	                        (struct sockaddr *) &sin, sizeof(sin)
+	                        essl->listen_fd
 	                       );
 
+	// this is not very helpful:
+	//evconnlistener_set_error_cb(essl->evl, listener_error_cb);
+
 	return evconnlistener_get_fd(essl->evl);
+
+cleanup_sock:
+	close(essl->listen_fd);
+	essl->listen_fd = -1;
+	return -1;
 }
 
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
@@ -336,6 +364,7 @@ evt_ssl_t *evt_ssl_create(
 	essl->errorlen = 0;
 	essl->state = SSL_STATE_PREPARING;
 	essl->dont_ssl = false;
+	essl->listen_fd = -1;
 
 	if (errorcb) {
 		essl->errorcb = errorcb;
@@ -502,6 +531,10 @@ void evt_ssl_free(evt_ssl_t *essl)
 
 	if (essl->evl) {
 		evconnlistener_free(essl->evl);
+	}
+
+	if (essl->listen_fd != -1) {
+		close(essl->listen_fd);
 	}
 
 	if (essl->dns_base) {
