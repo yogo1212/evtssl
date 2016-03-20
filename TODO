@@ -1,0 +1,2 @@
+don't store error in the struct, look at infocb
+in handle_openssl_error call errorcb on error
