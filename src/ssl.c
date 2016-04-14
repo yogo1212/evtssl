@@ -23,6 +23,8 @@ struct evt_ssl {
 	char hostname[257];
 	int port;
 
+	int family;
+
 	bool dont_ssl;
 
 	//TODO maybe heap is better w/ realloc
@@ -332,7 +334,7 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 
 	struct evutil_addrinfo hints;
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_UNSPEC;
+	hints.ai_family = essl->family;
 	hints.ai_flags = EVUTIL_AI_CANONNAME;
 	/* Unless we specify a socktype, we'll get at least two entries for
 	 * each address: one for TCP and one for UDP. That's not what we
@@ -346,6 +348,11 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 		  &hints, ssl_dns_callback, essl);
 
 	return res;
+}
+
+void evt_ssl_set_family(evt_ssl_t *essl, int family)
+{
+	essl->family = family;
 }
 
 evt_ssl_t *evt_ssl_create(
@@ -365,6 +372,7 @@ evt_ssl_t *evt_ssl_create(
 	essl->state = SSL_STATE_PREPARING;
 	essl->dont_ssl = false;
 	essl->listen_fd = -1;
+	essl->family = AF_UNSPEC;
 
 	if (errorcb) {
 		essl->errorcb = errorcb;
