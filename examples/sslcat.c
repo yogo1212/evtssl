@@ -19,6 +19,7 @@ typedef struct {
 	const char *cert;
 	bool nossl;
 	bool listen;
+	int family;
 } nc_opts_t;
 
 typedef struct {
@@ -210,6 +211,7 @@ enum option_repr {
 	opt_cert,
 	opt_nossl,
 	opt_listen,
+	opt_family,
 };
 static struct option options[] = {
 	{ "host", 1, NULL, opt_host },
@@ -220,6 +222,7 @@ static struct option options[] = {
 	{ "cert", 1, NULL, opt_cert },
 	{ "nossl", 0, NULL, opt_nossl },
 	{ "listen", 0, NULL, opt_listen },
+	{ "family", 1, NULL, opt_family },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -240,6 +243,7 @@ static void print_help(void)
 		puts("");
 		opt++;
 	}
+	puts("family can be either 4 or 6 (unspec elsewise)");
 }
 
 // TODO option, arg, param... naming?
@@ -284,6 +288,12 @@ static bool parse_args(nc_opts_t *no, int argc, char *argv[])
 			break;
 		case opt_listen:
 			no->listen = true;
+			break;
+		case opt_family:
+			if (strcmp(optarg, "4") == 0)
+				no->family = AF_INET;
+			else if (strcmp(optarg, "6") == 0)
+				no->family = AF_INET6;
 			break;
 		default:
 			fprintf(stderr, "getopt_long huh? (%d)\n", c);
@@ -369,6 +379,9 @@ int main(int argc, char *argv[])
 	evutil_make_socket_nonblocking(STDOUT_FILENO);
 	// EV_READ is in order to receive close-events
 	sc.evt_out = event_new(sc.base, STDOUT_FILENO, EV_READ | EV_WRITE | EV_PERSIST, stdout_cb, &sc);
+
+	if (sc.no.family != 0)
+		evt_ssl_set_family(sc.essl, sc.no.family);
 
 	sc.ssl = NULL;
 	if (sc.no.listen) {
