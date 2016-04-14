@@ -80,10 +80,10 @@ ouch_fd:
 	close(fd);
 
 ouch:
-	event_free(sc->evt_in);
-	sc->evt_in = NULL;
+	event_free(sc->evt_out);
+	sc->evt_out = NULL;
 
-	if (!sc->evt_out)
+	if (!sc->evt_in)
 		event_base_loopbreak(sc->base);
 }
 
@@ -391,8 +391,10 @@ int main(int argc, char *argv[])
 		bufferevent_free(sc.ssl);
 
 past_loop:
-	event_free(sc.evt_out);
-	event_free(sc.evt_in);
+	if (sc.evt_out)
+		event_free(sc.evt_out);
+	if (sc.evt_in)
+		event_free(sc.evt_in);
 
 	evt_ssl_free(sc.essl);
 
