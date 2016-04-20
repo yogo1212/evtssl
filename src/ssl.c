@@ -430,10 +430,10 @@ evt_ssl_t *evt_ssl_create(
 		const char *err = configcb(essl, essl->ssl_ctx);
 
 		if (err) {
-			strncpy(essl->error, err, sizeof(essl->error));
-			essl->error[sizeof(essl->error) - 1] = '\0';
+			evt_ssl_collectSSLerr(essl, err);
 
 			evt_ssl_call_errorcb(essl, SSL_ERROR_CONFIG);
+			evt_ssl_free(essl);
 			return NULL;
 		}
 	}
