@@ -21,9 +21,7 @@ typedef enum {
 	SSL_ERROR_CONNECTION
 } evt_ssl_error_t;
 
-/* Return true if you want the library to free the struct. Return false if you want to do that yourself later */
-/* that's not the way to clean up (ha. ha.). */
-typedef bool (*evt_ssl_error_cb_t)(evt_ssl_t *essl, evt_ssl_error_t error);
+typedef void (*evt_ssl_error_cb_t)(evt_ssl_t *essl, evt_ssl_error_t error);
 /* Return NULL if everything went ok or a string containing an error */
 typedef const char *(*evt_ssl_ssl_ctx_config_cb_t)(evt_ssl_t *essl, SSL_CTX *ssl_ctx);
 

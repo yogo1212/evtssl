@@ -72,7 +72,7 @@ void evt_ssl_dont_really_ssl(evt_ssl_t *essl)
 }
 
 static void evt_ssl_collectSSLerr(evt_ssl_t *essl, const char *prefix);
-static bool evt_ssl_call_errorcb(evt_ssl_t *essl, evt_ssl_error_t error);
+static void evt_ssl_call_errorcb(evt_ssl_t *essl, evt_ssl_error_t error);
 static int cert_verify_callback(X509_STORE_CTX *x509_ctx, void *arg);
 
 static void ssl_dns_callback(int errcode, struct evutil_addrinfo *addr, void *ptr)
@@ -109,7 +109,7 @@ static void ssl_dns_callback(int errcode, struct evutil_addrinfo *addr, void *pt
 	essl->bev = NULL;
 }
 
-static bool default_ssl_error_handler(evt_ssl_t *essl, evt_ssl_error_t error)
+static void default_ssl_error_handler(evt_ssl_t *essl, evt_ssl_error_t error)
 {
 	fprintf(stderr, "ERROR: ");
 
@@ -134,7 +134,6 @@ static bool default_ssl_error_handler(evt_ssl_t *essl, evt_ssl_error_t error)
 	}
 
 	fprintf(stderr, " %s\n", evt_ssl_get_error_str(essl));
-	return true;
 }
 
 static void handle_openssl_error(const SSL *ssl, int type, int val)
@@ -308,9 +307,8 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 		if (ssl == NULL) {
 			evt_ssl_collectSSLerr(essl, "SSL_new");
 
-			if (evt_ssl_call_errorcb(essl, SSL_ERROR_INIT)) {
-				return NULL;
-			}
+			evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+			return NULL;
 		}
 
 		SSL_set_ex_data(ssl, ex_data_index, essl);
@@ -515,20 +513,11 @@ leave:
 	return 0;
 }
 
-static bool evt_ssl_call_errorcb(evt_ssl_t *essl, evt_ssl_error_t error)
+static void evt_ssl_call_errorcb(evt_ssl_t *essl, evt_ssl_error_t error)
 {
-	// TODO is this smart or not?
-	bool res = true;
-
 	if (essl->errorcb) {
-		res = essl->errorcb(essl, error);
+		essl->errorcb(essl, error);
 	}
-
-	if (res) {
-		evt_ssl_free(essl);
-	}
-
-	return res;
 }
 
 void evt_ssl_free(evt_ssl_t *essl)
