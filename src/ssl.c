@@ -301,34 +301,32 @@ struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl)
 		return NULL;
 	}
 
-	struct bufferevent *bev;
 	if (essl->dont_ssl) {
-		bev = bufferevent_socket_new(essl->base, -1, BEV_OPT_CLOSE_ON_FREE);
+		return bufferevent_socket_new(essl->base, -1, BEV_OPT_CLOSE_ON_FREE);
 	}
-	else {
-		SSL *ssl;
-		ssl = SSL_new(essl->ssl_ctx);
 
-		if (ssl == NULL) {
-			evt_ssl_collectSSLerr(essl, "SSL_new");
+	SSL *ssl;
+	ssl = SSL_new(essl->ssl_ctx);
 
-			evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
-			return NULL;
-		}
+	if (ssl == NULL) {
+		evt_ssl_collectSSLerr(essl, "SSL_new");
 
-		SSL_set_ex_data(ssl, ex_data_index, essl);
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		return NULL;
+	}
+
+	SSL_set_ex_data(ssl, ex_data_index, essl);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-		// Set hostname for SNI extension
-		SSL_set_tlsext_host_name(ssl, essl->hostname);
+	// Set hostname for SNI extension
+	SSL_set_tlsext_host_name(ssl, essl->hostname);
 #endif
 
-		bev = bufferevent_openssl_socket_new(essl->base, -1, ssl,
-					BUFFEREVENT_SSL_CONNECTING,
-					BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+	struct bufferevent *bev = bufferevent_openssl_socket_new(essl->base, -1, ssl,
+				BUFFEREVENT_SSL_CONNECTING,
+				BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 
-		bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
-	}
+	bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
 
 	return bev;
 }
