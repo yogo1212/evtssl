@@ -49,6 +49,8 @@ int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb);
 
 typedef struct bufferevent *(*build_connection_t)(void *state);
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl);
+// yields a configured - unconnected - bufferevent
+struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl);
 
 const char *evt_ssl_get_hostname(evt_ssl_t *essl);
 unsigned short evt_ssl_get_port(evt_ssl_t *essl);

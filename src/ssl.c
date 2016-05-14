@@ -293,20 +293,17 @@ cleanup_sock:
 	return -1;
 }
 
-struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
+struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl)
 {
-	if (essl->bev) {
-		return NULL;
-	}
-
 	if (essl->hostname[0] == '\0') {
 		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "empty hostname");
 		evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
 		return NULL;
 	}
 
+	struct bufferevent *bev;
 	if (essl->dont_ssl) {
-		essl->bev = bufferevent_socket_new(essl->base, -1, BEV_OPT_CLOSE_ON_FREE);
+		bev = bufferevent_socket_new(essl->base, -1, BEV_OPT_CLOSE_ON_FREE);
 	}
 	else {
 		SSL *ssl;
@@ -326,11 +323,20 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 		SSL_set_tlsext_host_name(ssl, essl->hostname);
 #endif
 
-		essl->bev = bufferevent_openssl_socket_new(essl->base, -1, ssl,
-				BUFFEREVENT_SSL_CONNECTING,
-				BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+		bev = bufferevent_openssl_socket_new(essl->base, -1, ssl,
+					BUFFEREVENT_SSL_CONNECTING,
+					BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 
-		bufferevent_openssl_set_allow_dirty_shutdown(essl->bev, 1);
+		bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
+	}
+
+	return bev;
+}
+
+struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
+{
+	if (essl->bev) {
+		return NULL;
 	}
 
 	essl->state = SSL_STATE_CONNECTING;
@@ -346,7 +352,7 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 	hints.ai_protocol = IPPROTO_TCP;
 
 	// essl->bev could be reset by the DNS callback
-	struct bufferevent *res = essl->bev;
+	struct bufferevent *res = evt_ssl_new_bev(essl);
 	evdns_getaddrinfo(essl->dns_base, essl->hostname, NULL,
 		  &hints, ssl_dns_callback, essl);
 
