@@ -232,13 +232,16 @@ static void acceptcb(
 		                                     BUFFEREVENT_SSL_ACCEPTING,
 		                                     BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS
 		                                    );
+
 		if (bev == NULL) {
 			essl->errorlen = snprintf(essl->error, sizeof(essl->error), "couldn't accept ssl connection");
 			evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
 			return;
 		}
+
 		bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
 	}
+
 	essl->accept_cb(essl, bev, addr, addrlen);
 }
 
