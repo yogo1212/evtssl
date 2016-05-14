@@ -338,7 +338,6 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 	}
 
 	essl->state = SSL_STATE_CONNECTING;
-
 	// spawn dns-lookup
 	essl->dns_base = evdns_base_new(essl->base, EVDNS_BASE_INITIALIZE_NAMESERVERS);
 
@@ -350,7 +349,9 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 	hints.ai_protocol = IPPROTO_TCP;
 
 	// essl->bev could be reset by the DNS callback
-	struct bufferevent *res = evt_ssl_new_bev(essl);
+	essl->bev = evt_ssl_new_bev(essl);
+
+	struct bufferevent *res = essl->bev;
 	evdns_getaddrinfo(essl->dns_base, essl->hostname, NULL,
 		  &hints, ssl_dns_callback, essl);
 
