@@ -339,13 +339,10 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = essl->family;
 	hints.ai_flags = EVUTIL_AI_CANONNAME;
-	/* Unless we specify a socktype, we'll get at least two entries for
-	 * each address: one for TCP and one for UDP. That's not what we
-	 * want. */
 	hints.ai_socktype = SOCK_STREAM;
 	hints.ai_protocol = IPPROTO_TCP;
 
-
+	// essl->bev could be reset by the DNS callback
 	struct bufferevent *res = essl->bev;
 	evdns_getaddrinfo(essl->dns_base, essl->hostname, NULL,
 		  &hints, ssl_dns_callback, essl);

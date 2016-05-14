@@ -54,7 +54,12 @@ const char *evt_ssl_get_hostname(evt_ssl_t *essl);
 unsigned short evt_ssl_get_port(evt_ssl_t *essl);
 void *evt_ssl_get_ctx(evt_ssl_t *essl);
 
-// you don't need to do this
+/*
+ * init openssl and add an index for evt_ssl
+ * after _init has been called n times, the n-th call to _cleanup will cleanup openssl
+ * evt_ssl will call those automatically
+ * (-> will annoy you horribly when you use openssl elsewhere)
+ */
 void evt_ssl_lib_init(void);
 void evt_ssl_lib_cleanup(void);
 
