@@ -28,7 +28,7 @@ struct evt_ssl {
 	bool dont_ssl;
 
 	//TODO maybe heap is better w/ realloc
-	char error[1024];
+	char error[2048];
 	size_t errorlen;
 	evt_ssl_error_cb_t errorcb;
 	enum EVT_SSL_STATE state;
