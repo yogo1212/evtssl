@@ -656,7 +656,6 @@ void evt_ssl_lib_cleanup(void)
 	}
 
 	//CONF_modules_free();
-	ERR_remove_state(0);
 	//ENGINE_cleanup();
 	//CONF_modules_unload(1);
 	ERR_free_strings();
