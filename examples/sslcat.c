@@ -20,6 +20,7 @@ typedef struct {
 	bool nossl;
 	bool listen;
 	int family;
+	bool reconnect;
 } nc_opts_t;
 
 typedef struct {
@@ -119,6 +120,8 @@ ouch:
 		event_base_loopbreak(sc->base);
 }
 
+static void set_ssl_bev(sslcat_t *sc, struct bufferevent *bev);
+
 static void ssleventcb(struct bufferevent *bev, short events, void *ctx)
 {
 	(void) bev;
@@ -130,14 +133,40 @@ static void ssleventcb(struct bufferevent *bev, short events, void *ctx)
 	}
 	else if (events & BEV_EVENT_ERROR) {
 		fprintf(stderr, "connection had an accident: %s\n", strerror(errno));
+		if (sc->no.reconnect)
+			goto reconnect;
 	}
 	else if (events & BEV_EVENT_TIMEOUT) {
 		fprintf(stderr, "connection timed out\n");
+		if (sc->no.reconnect)
+			goto reconnect;
 	}
 	else if (events & BEV_EVENT_EOF) {
 		fprintf(stderr, "connection was closed: %d\n", events);
-		event_base_loopbreak(sc->base);
+		if (sc->no.reconnect)
+			goto reconnect;
+		else
+			event_base_loopbreak(sc->base);
 	}
+
+	return;
+
+	struct bufferevent *old;
+	struct evbuffer *out_buf;
+
+reconnect:
+	event_del(sc->evt_in);
+	// here's something you don't see often (and rightfully so)
+	sleep(1);
+
+	old = sc->ssl;
+	set_ssl_bev(sc, evt_ssl_connect(sc->essl));
+
+	bufferevent_read_buffer(old, bufferevent_get_input(sc->ssl));
+	out_buf = bufferevent_get_output(old);
+	bufferevent_write_buffer(sc->ssl, out_buf);
+
+	bufferevent_free(old);
 }
 
 static void sslreadcb(struct bufferevent *bev, void *ctx)
@@ -210,6 +239,7 @@ enum option_repr {
 	opt_nossl,
 	opt_listen,
 	opt_family,
+	opt_reconnect,
 };
 static struct option options[] = {
 	{ "host", 1, NULL, opt_host },
@@ -221,6 +251,7 @@ static struct option options[] = {
 	{ "nossl", 0, NULL, opt_nossl },
 	{ "listen", 0, NULL, opt_listen },
 	{ "family", 1, NULL, opt_family },
+	{ "reconnect", 0, NULL, opt_reconnect },
 	{ NULL, 0, NULL, 0 }
 };
 
@@ -292,6 +323,9 @@ static bool parse_args(nc_opts_t *no, int argc, char *argv[])
 				no->family = AF_INET;
 			else if (strcmp(optarg, "6") == 0)
 				no->family = AF_INET6;
+			break;
+		case opt_reconnect:
+			no->reconnect = true;
 			break;
 		default:
 			fprintf(stderr, "getopt_long huh? (%d)\n", c);
