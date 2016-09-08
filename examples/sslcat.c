@@ -129,7 +129,7 @@ static void ssleventcb(struct bufferevent *bev, short events, void *ctx)
 		event_add(sc->evt_in, NULL);
 	}
 	else if (events & BEV_EVENT_ERROR) {
-		fprintf(stderr, "connection had an accident: %d\n", EVUTIL_SOCKET_ERROR());
+		fprintf(stderr, "connection had an accident: %s\n", strerror(errno));
 	}
 	else if (events & BEV_EVENT_TIMEOUT) {
 		fprintf(stderr, "connection timed out\n");
