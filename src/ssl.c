@@ -169,7 +169,6 @@ static void handle_openssl_error(const SSL *ssl, int type, int val)
 		essl->infocb(essl, info, infolen);
 	}
 	else if (type & SSL_CB_ALERT) {
-
 		str = (type & SSL_CB_READ) ? "read" : "write";
 		infolen = snprintf(info, sizeof(info) - 1, "SSL3 alert %s: %s:%s\n",
 			   str,
@@ -179,7 +178,6 @@ static void handle_openssl_error(const SSL *ssl, int type, int val)
 		essl->infocb(essl, info, infolen);
 	}
 	else if (type & SSL_CB_EXIT) {
-
 		if (val == 0) {
 			infolen = snprintf(info, sizeof(info) - 1, "%s: failed in %s\n",
 				   str, SSL_state_string_long(ssl));
