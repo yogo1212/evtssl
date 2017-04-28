@@ -47,7 +47,6 @@ typedef void (*evt_ssl_accept_cb_t)(evt_ssl_t *essl, struct bufferevent *bev, st
 // TODO returns the FD that is being listened on
 int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb);
 
-typedef struct bufferevent *(*build_connection_t)(void *state);
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl);
 // yields a configured - unconnected - bufferevent
 struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl);
