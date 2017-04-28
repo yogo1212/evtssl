@@ -335,6 +335,12 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 		return NULL;
 	}
 
+	if (essl->port == 0) {
+		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "port is zero");
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		return NULL;
+	}
+
 	essl->state = SSL_STATE_CONNECTING;
 	// spawn dns-lookup
 	essl->dns_base = evdns_base_new(essl->base, EVDNS_BASE_INITIALIZE_NAMESERVERS);
@@ -394,11 +400,6 @@ evt_ssl_t *evt_ssl_create(
 	}
 	else {
 		essl->hostname[0] = '\0';
-	}
-	if (port == 0) {
-		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "port is zero");
-		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
-		return NULL;
 	}
 	essl->port = port;
 
