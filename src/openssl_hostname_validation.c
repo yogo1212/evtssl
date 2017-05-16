@@ -39,6 +39,8 @@ SOFTWARE.
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 #endif
 
+#include <string.h>
+
 #include <openssl/x509v3.h>
 #include <openssl/ssl.h>
 
