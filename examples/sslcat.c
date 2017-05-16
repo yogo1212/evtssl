@@ -424,7 +424,12 @@ int main(int argc, char *argv[])
 		}
 	}
 	else {
-		set_ssl_bev(&sc, evt_ssl_connect(sc.essl));
+		struct bufferevent *bev = evt_ssl_connect(sc.essl);
+		if (!bev) {
+			fprintf(stderr, "_connect == NULL\n");
+			goto past_loop;
+		}
+		set_ssl_bev(&sc, bev);
 	}
 
 	sc.sig_event = evsignal_new(sc.base, SIGINT, handle_interrupt, &sc);
