@@ -456,7 +456,7 @@ static int cert_verify_callback(X509_STORE_CTX *x509_ctx, void *arg)
 	const char *res_str = NULL;
 
 	if (X509_verify_cert(x509_ctx) <= 0) {
-		res_str = X509_verify_cert_error_string(x509_ctx->error);
+		res_str = X509_verify_cert_error_string(X509_STORE_CTX_get_error(x509_ctx));
 	}
 
 	server_cert = X509_STORE_CTX_get_current_cert(x509_ctx);
