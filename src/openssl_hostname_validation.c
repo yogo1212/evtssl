@@ -49,6 +49,10 @@ SOFTWARE.
 
 #define HOSTNAME_MAX_SIZE 255
 
+#ifndef DEPRECATEDIN_1_1_0
+#define ASN1_STRING_get0_data ASN1_STRING_data
+#endif
+
 /**
 * Tries to find a match for hostname in the certificate's Common Name field.
 *
