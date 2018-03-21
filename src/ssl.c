@@ -40,6 +40,7 @@ struct evt_ssl {
 
 	SSL_CTX *ssl_ctx;
 
+	// TODO dirty hack to find which bev a DNS lookup was for.. fix!
 	struct bufferevent *bev;
 
 	struct evconnlistener *evl;
