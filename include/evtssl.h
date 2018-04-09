@@ -54,6 +54,8 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl);
  */
 struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl);
 
+struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev, enum bufferevent_ssl_state state);
+
 const char *evt_ssl_get_hostname(evt_ssl_t *essl);
 unsigned short evt_ssl_get_port(evt_ssl_t *essl);
 void *evt_ssl_get_ctx(evt_ssl_t *essl);

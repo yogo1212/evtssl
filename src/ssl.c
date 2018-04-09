@@ -293,6 +293,37 @@ cleanup_sock:
 	return -1;
 }
 
+struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev, enum bufferevent_ssl_state state)
+{
+	if (essl->dont_ssl)
+		return bev;
+
+	SSL *ssl;
+	ssl = SSL_new(essl->ssl_ctx);
+
+	if (ssl == NULL) {
+		evt_ssl_collectSSLerr(essl, "SSL_new");
+
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		return NULL;
+	}
+
+	SSL_set_ex_data(ssl, ex_data_index, essl);
+
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+	// Set hostname for SNI extension - TODO only do this for connecting?
+	SSL_set_tlsext_host_name(ssl, essl->hostname);
+#endif
+
+	struct bufferevent *new = bufferevent_openssl_filter_new(essl->base, bev, ssl,
+				state,
+				BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+
+	bufferevent_openssl_set_allow_dirty_shutdown(new, 1);
+
+	return new;
+}
+
 struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl)
 {
 	if (essl->hostname[0] == '\0') {
