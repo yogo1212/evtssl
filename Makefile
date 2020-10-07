@@ -81,37 +81,38 @@ clean::
 
 #from here on it's cheap install-stuff. probably rubbish
 
-prefix ?= /usr/local
+ROOT ?= /
+usr ?= usr/local/
 
-INSTALLDIR = $(prefix)/
-LIBINSTALLDIR = $(INSTALLDIR)lib/
-HEADERINSTALLDIR = $(INSTALLDIR)include/
-EXAMPLESINSTALLDIR = $(INSTALLDIR)bin/
+usrdir = $(ROOT)$(usr)
+libdir = $(usrdir)lib/
+includedir = $(usrdir)include/
+bindir = $(usrdir)bin/
 
 INSTALL_BIN_CMD=install -m 0755
 
 install_lib: $(LIBBIN).$(VERSION)
-	mkdir -p $(LIBINSTALLDIR)
-	$(INSTALL_BIN_CMD) $^ $(LIBINSTALLDIR)
-	cd $(LIBINSTALLDIR) ; ln -fs $(patsubst $(BINDIR)/%,%,$(LIBBIN).$(VERSION)) $(patsubst $(BINDIR)/%,%,$(LIBBIN))
+	mkdir -p $(libdir)
+	$(INSTALL_BIN_CMD) $^ $(libdir)
+	cd $(libdir) ; ln -fs $(patsubst $(BINDIR)/%,%,$(LIBBIN).$(VERSION)) $(patsubst $(BINDIR)/%,%,$(LIBBIN))
 
 install_headers: $(LIBHEADERS)
-	mkdir -p $(HEADERINSTALLDIR)
-	install $(LIBHEADERS) $(HEADERINSTALLDIR)
+	mkdir -p $(includedir)
+	install $(LIBHEADERS) $(includedir)
 
 install_examples: $(EXBINS)
-	mkdir -p $(EXAMPLESINSTALLDIR)
-	$(INSTALL_BIN_CMD) $^ $(EXAMPLESINSTALLDIR)
+	mkdir -p $(bindir)
+	$(INSTALL_BIN_CMD) $^ $(bindir)
 
 install: install_lib install_headers install_examples
 
 uninstall_lib:
-	rm -f $(patsubst $(BINDIR)/%,$(LIBINSTALLDIR)/%*,$(LIBBIN))
+	rm -f $(patsubst $(BINDIR)/%,$(libdir)/%*,$(LIBBIN))
 
 uninstall_headers:
-	rm -f $(patsubst $(INCDIR)/%,$(HEADERINSTALLDIR)/%,$(LIBHEADERS))
+	rm -f $(patsubst $(INCDIR)/%,$(includedir)/%,$(LIBHEADERS))
 
 uninstall_examples:
-	rm -f $(patsubst $(BINDIR)/%,$(EXAMPLESINSTALLDIR)/%,$(EXBINS))
+	rm -f $(patsubst $(BINDIR)/%,$(bindir)/%,$(EXBINS))
 
 uninstall: uninstall_lib uninstall_headers uninstall_examples
