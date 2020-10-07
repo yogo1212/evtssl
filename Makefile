@@ -27,9 +27,9 @@ endif
 LDFLAGS += -levent -levent_openssl -lssl -lcrypto
 
 LIBCFLAGS := $(CFLAGS) -fPIC
-LIBLDFLAGS := $(LDFLAGS) -shared -Lbin
+LIBLDFLAGS := $(LDFLAGS) -shared
 
-EXLDFLAGS := $(LDFLAGS) -l$(NAME)
+EXLDFLAGS := $(LDFLAGS) -l$(NAME) -Lbin
 
 LIBSOURCES = $(wildcard $(LIBSRCDIR)/*.c)
 LIBOBJECTS = $(patsubst $(LIBSRCDIR)/%.c,$(LIBOBJDIR)/%.o,$(LIBSOURCES))
