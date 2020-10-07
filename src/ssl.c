@@ -20,8 +20,11 @@ enum EVT_SSL_STATE {
 	SSL_STATE_ERROR
 };
 
+// includes the terminating null byte
+#define RFC_1035_NAME_MAX (255)
+
 struct evt_ssl {
-	char hostname[257];
+	char hostname[RFC_1035_NAME_MAX];
 	int port;
 
 	int family;
@@ -429,7 +432,9 @@ evt_ssl_t *evt_ssl_create(
 	essl->infocb = NULL;
 
 	if (hostname != NULL) {
-		strncpy(essl->hostname, hostname, sizeof(essl->hostname));
+		// TODO truncates silently
+		strncpy(essl->hostname, hostname, sizeof(essl->hostname) - 1);
+		essl->hostname[sizeof(essl->hostname) - 1] = '\0';
 	}
 	else {
 		essl->hostname[0] = '\0';
