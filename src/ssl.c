@@ -199,6 +199,19 @@ static void handle_openssl_error(const SSL *ssl, int type, int val)
 	}
 }
 
+static SSL *new_ssl(evt_ssl_t *essl)
+{
+	SSL *ssl = SSL_new(essl->ssl_ctx);
+	if (!ssl) {
+		evt_ssl_collectSSLerr(essl, "SSL_new");
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		return NULL;
+	}
+
+	SSL_set_ex_data(ssl, ex_data_index, essl);
+	return ssl;
+}
+
 static void acceptcb(
                      struct evconnlistener *listener,
                      int fd,
@@ -218,17 +231,9 @@ static void acceptcb(
 	if (essl->dont_ssl) {
 		bev = bufferevent_socket_new(essl->base, fd, BEV_OPT_CLOSE_ON_FREE);
 	} else {
-		SSL *ssl;
-		ssl = SSL_new(essl->ssl_ctx);
-
-		if (ssl == NULL) {
-			evt_ssl_collectSSLerr(essl, "SSL_new");
-
-			evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
+		SSL *ssl = new_ssl(essl);
+		if (!ssl)
 			return;
-		}
-
-    SSL_set_ex_data(ssl, ex_data_index, essl);
 
 		bev = bufferevent_openssl_socket_new(
 		                                     essl->base, fd, ssl,
@@ -301,17 +306,9 @@ struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev,
 	if (essl->dont_ssl)
 		return bev;
 
-	SSL *ssl;
-	ssl = SSL_new(essl->ssl_ctx);
-
-	if (ssl == NULL) {
-		evt_ssl_collectSSLerr(essl, "SSL_new");
-
-		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+	SSL *ssl = new_ssl(essl);
+	if (!ssl)
 		return NULL;
-	}
-
-	SSL_set_ex_data(ssl, ex_data_index, essl);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	// Set hostname for SNI extension - TODO only do this for connecting?
@@ -339,17 +336,9 @@ struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl)
 		return bufferevent_socket_new(essl->base, -1, BEV_OPT_CLOSE_ON_FREE);
 	}
 
-	SSL *ssl;
-	ssl = SSL_new(essl->ssl_ctx);
-
-	if (ssl == NULL) {
-		evt_ssl_collectSSLerr(essl, "SSL_new");
-
-		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+	SSL *ssl = new_ssl(essl);
+	if (!ssl)
 		return NULL;
-	}
-
-	SSL_set_ex_data(ssl, ex_data_index, essl);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	// Set hostname for SNI extension
