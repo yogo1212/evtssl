@@ -371,6 +371,8 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 
 	// essl->bev could be reset by the DNS callback
 	essl->bev = evt_ssl_new_bev(essl, -1, false);
+	if (!essl->bev)
+		return NULL;
 
 	struct bufferevent *res = essl->bev;
 	evdns_getaddrinfo(essl->dns_base, essl->hostname, NULL,
