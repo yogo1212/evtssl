@@ -392,12 +392,48 @@ void evt_ssl_set_family(evt_ssl_t *essl, int family)
 	essl->family = family;
 }
 
+bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *ctx)
+{
+	if (essl->ssl_ctx)
+		SSL_CTX_free(essl->ssl_ctx);
+
+	essl->ssl_ctx = SSL_CTX_new(SSLv23_method());
+	if (!essl->ssl_ctx) {
+		evt_ssl_collectSSLerr(essl, "CTX_new");
+
+		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+		evt_ssl_free(essl);
+		return false;
+	}
+
+	SSL_CTX_set_info_callback(essl->ssl_ctx, handle_openssl_error);
+
+	/*
+	 * This does default checks AND checks whether the certificate
+	 * is actually for the host we're connecting to.
+	 */
+	SSL_CTX_set_cert_verify_callback(essl->ssl_ctx, cert_verify_callback, essl);
+
+	SSL_CTX_set_default_verify_paths(essl->ssl_ctx);
+
+	if (!cb)
+		return true;
+
+	const char *err = cb(essl, essl->ssl_ctx, ctx);
+	if (err) {
+		evt_ssl_collectSSLerr(essl, err);
+		evt_ssl_call_errorcb(essl, SSL_ERROR_CONFIG);
+		return false;
+	}
+
+	return true;
+}
+
 evt_ssl_t *evt_ssl_create(
 	struct event_base *base,
 	const char *hostname,
 	const int port,
 	void *ctx,
-	evt_ssl_ssl_ctx_config_cb_t configcb,
 	evt_ssl_error_cb_t errorcb
 )
 {
@@ -437,37 +473,7 @@ evt_ssl_t *evt_ssl_create(
 
 	essl->dns_base = NULL;
 
-	essl->ssl_ctx = SSL_CTX_new(SSLv23_method());
-
-	if (!essl->ssl_ctx) {
-		evt_ssl_collectSSLerr(essl, "CTX_new");
-
-		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
-		evt_ssl_free(essl);
-		return NULL;
-	}
-
-	SSL_CTX_set_info_callback(essl->ssl_ctx, handle_openssl_error);
-
-	/*
-	 * This does default checks AND checks whether the certificate
-	 * is actually for the host we're connecting to.
-	 */
-	SSL_CTX_set_cert_verify_callback(essl->ssl_ctx, cert_verify_callback, essl);
-
-	SSL_CTX_set_default_verify_paths(essl->ssl_ctx);
-
-	if (configcb) {
-		const char *err = configcb(essl, essl->ssl_ctx);
-
-		if (err) {
-			evt_ssl_collectSSLerr(essl, err);
-
-			evt_ssl_call_errorcb(essl, SSL_ERROR_CONFIG);
-			evt_ssl_free(essl);
-			return NULL;
-		}
-	}
+	evt_ssl_reconfigure(essl, NULL, NULL);
 
 	return essl;
 }

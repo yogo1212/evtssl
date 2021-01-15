@@ -23,18 +23,19 @@ typedef enum {
 } evt_ssl_error_t;
 
 typedef void (*evt_ssl_error_cb_t)(evt_ssl_t *essl, evt_ssl_error_t error);
-/* Return NULL if everything went ok or a string containing an error */
-typedef const char *(*evt_ssl_ssl_ctx_config_cb_t)(evt_ssl_t *essl, SSL_CTX *ssl_ctx);
 
 evt_ssl_t *evt_ssl_create(
 	struct event_base *base,
 	const char *hostname,
 	const int port,
 	void *userptr,
-	evt_ssl_ssl_ctx_config_cb_t configcb,
 	evt_ssl_error_cb_t errorcb
 );
 void evt_ssl_free(evt_ssl_t *essl);
+
+/* Return NULL if everything went ok or a string containing an error */
+typedef const char *(*evt_ssl_ssl_ctx_config_cb_t)(evt_ssl_t *essl, SSL_CTX *ssl_ctx, void *ctx);
+bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *ctx);
 
 typedef void (*evt_ssl_info_cb_t)(evt_ssl_t *ess, char *msg, size_t msglen);
 void evt_ssl_set_info_cb(evt_ssl_t *essl, evt_ssl_info_cb_t infocb);
