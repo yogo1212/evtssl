@@ -54,9 +54,9 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl);
  * yields a configured - unconnected - bufferevent
  * use with bufferevent_setfd or bufferevent_socket_connect
  */
-struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl);
+struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl, int fd, bool accepting);
 
-struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev, enum bufferevent_ssl_state state);
+struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev, bool accepting);
 
 const char *evt_ssl_get_hostname(evt_ssl_t *essl);
 unsigned short evt_ssl_get_port(evt_ssl_t *essl);

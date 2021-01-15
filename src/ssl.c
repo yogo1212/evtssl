@@ -199,7 +199,7 @@ static void handle_openssl_error(const SSL *ssl, int type, int val)
 	}
 }
 
-static SSL *new_ssl(evt_ssl_t *essl)
+static SSL *new_ssl(evt_ssl_t *essl, bool accepting)
 {
 	SSL *ssl = SSL_new(essl->ssl_ctx);
 	if (!ssl) {
@@ -209,7 +209,38 @@ static SSL *new_ssl(evt_ssl_t *essl)
 	}
 
 	SSL_set_ex_data(ssl, ex_data_index, essl);
+
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
+	if (!accepting) {
+		// SNI
+		SSL_set_tlsext_host_name(ssl, essl->hostname);
+	}
+#endif
+
 	return ssl;
+}
+
+static struct bufferevent *new_bev(evt_ssl_t *essl, int fd, bool accepting)
+{
+	if (essl->dont_ssl)
+		return bufferevent_socket_new(essl->base, fd, BEV_OPT_CLOSE_ON_FREE);
+
+	SSL *ssl = new_ssl(essl, accepting);
+	if (!ssl)
+		return NULL;
+
+	struct bufferevent *bev = bufferevent_openssl_socket_new(essl->base, fd, ssl,
+		accepting ? BUFFEREVENT_SSL_ACCEPTING : BUFFEREVENT_SSL_CONNECTING,
+		BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+	if (!bev) {
+		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "couldn't create bev");
+		evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
+		return NULL;
+	}
+
+	bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
+
+	return bev;
 }
 
 static void acceptcb(
@@ -227,25 +258,7 @@ static void acceptcb(
 	//const int one = 1;
 	//setsockopt(fd, IPPROTO_TCP, TCP_NODELAY, (char *) &one, sizeof(one));
 
-	struct bufferevent *bev;
-	if (essl->dont_ssl) {
-		bev = bufferevent_socket_new(essl->base, fd, BEV_OPT_CLOSE_ON_FREE);
-	} else {
-		SSL *ssl = new_ssl(essl);
-		if (!ssl)
-			return;
-
-		bev = bufferevent_openssl_socket_new(essl->base, fd, ssl,
-			BUFFEREVENT_SSL_ACCEPTING,
-			BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-		if (!bev ) {
-			essl->errorlen = snprintf(essl->error, sizeof(essl->error), "couldn't accept ssl connection");
-			evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
-			return;
-		}
-
-		bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
-	}
+	struct bufferevent *bev = new_bev(essl, fd, true);
 
 	essl->accept_cb(essl, bev, addr, addrlen);
 }
@@ -298,22 +311,23 @@ cleanup_sock:
 	return -1;
 }
 
-struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev, enum bufferevent_ssl_state state)
+struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev, bool accepting)
 {
 	if (essl->dont_ssl)
 		return bev;
 
-	SSL *ssl = new_ssl(essl);
+	SSL *ssl = new_ssl(essl, accepting);
 	if (!ssl)
 		return NULL;
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-	// Set hostname for SNI extension - TODO only do this for connecting?
-	SSL_set_tlsext_host_name(ssl, essl->hostname);
+	// SNI
+	if (!accepting)
+		SSL_set_tlsext_host_name(ssl, essl->hostname);
 #endif
 
 	struct bufferevent *new = bufferevent_openssl_filter_new(essl->base, bev, ssl,
-				state,
+				accepting ? BUFFEREVENT_SSL_ACCEPTING : BUFFEREVENT_SSL_CONNECTING,
 				BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
 
 	bufferevent_openssl_set_allow_dirty_shutdown(new, 1);
@@ -321,34 +335,15 @@ struct bufferevent *evt_ssl_new_filter(evt_ssl_t *essl, struct bufferevent *bev,
 	return new;
 }
 
-struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl)
+struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl, int fd, bool accepting)
 {
-	if (essl->hostname[0] == '\0') {
+	if (!accepting && essl->hostname[0] == '\0') {
 		essl->errorlen = snprintf(essl->error, sizeof(essl->error), "empty hostname");
 		evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
 		return NULL;
 	}
 
-	if (essl->dont_ssl) {
-		return bufferevent_socket_new(essl->base, -1, BEV_OPT_CLOSE_ON_FREE);
-	}
-
-	SSL *ssl = new_ssl(essl);
-	if (!ssl)
-		return NULL;
-
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
-	// Set hostname for SNI extension
-	SSL_set_tlsext_host_name(ssl, essl->hostname);
-#endif
-
-	struct bufferevent *bev = bufferevent_openssl_socket_new(essl->base, -1, ssl,
-				BUFFEREVENT_SSL_CONNECTING,
-				BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
-
-	bufferevent_openssl_set_allow_dirty_shutdown(bev, 1);
-
-	return bev;
+	return new_bev(essl, fd, false);
 }
 
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
@@ -375,7 +370,7 @@ struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 	hints.ai_protocol = IPPROTO_TCP;
 
 	// essl->bev could be reset by the DNS callback
-	essl->bev = evt_ssl_new_bev(essl);
+	essl->bev = evt_ssl_new_bev(essl, -1, false);
 
 	struct bufferevent *res = essl->bev;
 	evdns_getaddrinfo(essl->dns_base, essl->hostname, NULL,
