@@ -343,7 +343,7 @@ struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl, int fd, bool accepting)
 		return NULL;
 	}
 
-	return new_bev(essl, fd, false);
+	return new_bev(essl, fd, accepting);
 }
 
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
