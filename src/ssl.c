@@ -235,13 +235,10 @@ static void acceptcb(
 		if (!ssl)
 			return;
 
-		bev = bufferevent_openssl_socket_new(
-		                                     essl->base, fd, ssl,
-		                                     BUFFEREVENT_SSL_ACCEPTING,
-		                                     BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS
-		                                    );
-
-		if (bev == NULL) {
+		bev = bufferevent_openssl_socket_new(essl->base, fd, ssl,
+			BUFFEREVENT_SSL_ACCEPTING,
+			BEV_OPT_CLOSE_ON_FREE | BEV_OPT_DEFER_CALLBACKS);
+		if (!bev ) {
 			essl->errorlen = snprintf(essl->error, sizeof(essl->error), "couldn't accept ssl connection");
 			evt_ssl_call_errorcb(essl, SSL_ERROR_CONNECTION);
 			return;
@@ -447,16 +444,14 @@ evt_ssl_t *evt_ssl_create(
 	essl->listen_fd = -1;
 	essl->family = AF_UNSPEC;
 
-	if (errorcb) {
+	if (errorcb)
 		essl->errorcb = errorcb;
-	}
-	else {
+	else
 		essl->errorcb = default_ssl_error_handler;
-	}
 
 	essl->infocb = NULL;
 
-	if (hostname != NULL) {
+	if (hostname) {
 		// TODO truncates silently
 		strncpy(essl->hostname, hostname, sizeof(essl->hostname) - 1);
 		essl->hostname[sizeof(essl->hostname) - 1] = '\0';
