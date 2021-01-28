@@ -1,5 +1,5 @@
 pkgname=libevtssl-git
-pkgver=0.6_11_gc20ad45
+pkgver=v1.0_7_g07f98d9
 pkgrel=1
 pkgdesc="produce sockets for use libevent"
 arch=('x86_64' 'armv7h' 'aarch64')
