@@ -627,7 +627,7 @@ void *evt_ssl_get_ctx(evt_ssl_t *essl)
 	return essl->ctx;
 }
 
-char *evt_ssl_get_error_str(evt_ssl_t *essl)
+const char *evt_ssl_get_error_str(evt_ssl_t *essl)
 {
 #if 0
 	int errcode = EVUTIL_SOCKET_ERROR();

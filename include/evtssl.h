@@ -40,7 +40,7 @@ bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *
 typedef void (*evt_ssl_info_cb_t)(evt_ssl_t *ess, char *msg, size_t msglen);
 void evt_ssl_set_info_cb(evt_ssl_t *essl, evt_ssl_info_cb_t infocb);
 
-char *evt_ssl_get_error_str(evt_ssl_t *essl);
+const char *evt_ssl_get_error_str(evt_ssl_t *essl);
 void evt_ssl_dont_really_ssl(evt_ssl_t *essl);
 
 void evt_ssl_set_family(evt_ssl_t *essl, int family);
