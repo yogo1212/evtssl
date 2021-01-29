@@ -15,7 +15,7 @@ sha256sums=('SKIP')
 pkgver() {
   cd evtssl
 
-	git describe --tags | tr - _
+	git describe --tags | sed 's/^v//' | tr - _
 }
 
 build() {
