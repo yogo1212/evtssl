@@ -346,6 +346,13 @@ struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl, int fd, bool accepting)
 	return new_bev(essl, fd, accepting);
 }
 
+// TODO
+// this is an ugly hack. previous versions of libevent had
+// 'int initialize_nameservers' for their second parameter instead of options
+#ifndef EVDNS_BASE_INITIALIZE_NAMESERVERS
+#define EVDNS_BASE_INITIALIZE_NAMESERVERS (1)
+#endif
+
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl)
 {
 	if (essl->bev) {
