@@ -52,7 +52,7 @@ int evt_ssl_listen(evt_ssl_t *essl, evt_ssl_accept_cb_t cb);
 struct bufferevent *evt_ssl_connect(evt_ssl_t *essl);
 /*
  * yields a configured - unconnected - bufferevent
- * use with bufferevent_setfd or bufferevent_socket_connect
+ * use with bufferevent_setfd, bufferevent_socket_connect, or evhttp_connection_base_bufferevent_new
  */
 struct bufferevent *evt_ssl_new_bev(evt_ssl_t *essl, int fd, bool accepting);
 
