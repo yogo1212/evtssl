@@ -403,7 +403,6 @@ bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *
 		evt_ssl_collectSSLerr(essl, "CTX_new");
 
 		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
-		evt_ssl_free(essl);
 		return false;
 	}
 
