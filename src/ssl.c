@@ -54,7 +54,7 @@ struct evt_ssl {
 	struct event_base *base;
 };
 
-static int ex_data_index;
+static int ssl_ctx_data_index;
 
 const char *evt_ssl_get_hostname(evt_ssl_t *essl)
 {
@@ -143,7 +143,12 @@ static void default_ssl_error_handler(evt_ssl_t *essl, evt_ssl_error_t error)
 
 static void handle_openssl_error(const SSL *ssl, int type, int val)
 {
-	evt_ssl_t *essl = SSL_get_ex_data(ssl, ex_data_index);
+	SSL_CTX *ssl_ctx = SSL_get_SSL_CTX(ssl);
+	evt_ssl_t *essl = SSL_CTX_get_ex_data(ssl_ctx, ssl_ctx_data_index);
+
+	// can happen if essl was free'd
+	if (!essl)
+		return;
 
 	if (!essl->infocb) {
 		return;
@@ -207,8 +212,6 @@ static SSL *new_ssl(evt_ssl_t *essl, bool accepting)
 		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
 		return NULL;
 	}
-
-	SSL_set_ex_data(ssl, ex_data_index, essl);
 
 #ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	if (!accepting) {
@@ -395,8 +398,10 @@ void evt_ssl_set_family(evt_ssl_t *essl, int family)
 
 bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *ctx)
 {
-	if (essl->ssl_ctx)
+	if (essl->ssl_ctx) {
+		SSL_CTX_set_ex_data(essl->ssl_ctx, ssl_ctx_data_index, NULL);
 		SSL_CTX_free(essl->ssl_ctx);
+	}
 
 	essl->ssl_ctx = SSL_CTX_new(TLS_method());
 	if (!essl->ssl_ctx) {
@@ -406,6 +411,7 @@ bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *
 		return false;
 	}
 
+	SSL_CTX_set_ex_data(essl->ssl_ctx, ssl_ctx_data_index, essl);
 	SSL_CTX_set_info_callback(essl->ssl_ctx, handle_openssl_error);
 
 	/*
@@ -587,6 +593,7 @@ void evt_ssl_free(evt_ssl_t *essl)
 	 */
 
 	if (essl->ssl_ctx) {
+		SSL_CTX_set_ex_data(essl->ssl_ctx, ssl_ctx_data_index, NULL);
 		SSL_CTX_free(essl->ssl_ctx);
 	}
 
@@ -674,7 +681,7 @@ void evt_ssl_lib_init(void)
 	SSL_load_error_strings();
 	OpenSSL_add_all_algorithms();
 
-	ex_data_index = SSL_get_ex_new_index(0, "evt_ssl", NULL, NULL, NULL);
+	ssl_ctx_data_index = SSL_CTX_get_ex_new_index(0, "evt_ssl", NULL, NULL, NULL);
 }
 
 void evt_ssl_lib_cleanup(void)
