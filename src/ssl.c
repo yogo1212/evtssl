@@ -403,7 +403,11 @@ bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *
 		SSL_CTX_free(essl->ssl_ctx);
 	}
 
+#ifndef TLS_method
+	essl->ssl_ctx = SSL_CTX_new(SSLv23_method());
+#else
 	essl->ssl_ctx = SSL_CTX_new(TLS_method());
+#endif
 	if (!essl->ssl_ctx) {
 		evt_ssl_collectSSLerr(essl, "CTX_new");
 
