@@ -1,5 +1,5 @@
 pkgname=libevtssl-git
-pkgver=v1.0_7_g07f98d9
+pkgver=1.0_19_ga2fbd52
 pkgrel=1
 pkgdesc="produce sockets for use libevent"
 arch=('x86_64' 'armv7h' 'aarch64')
@@ -9,7 +9,7 @@ conflicts=('libevtssl')
 license=('Unlicense')
 makedepends=('git' 'gcc' 'make')
 depends=('libevent')
-source=(git://github.com/yogo1212/evtssl.git)
+source=(git+https://github.com/yogo1212/evtssl.git)
 sha256sums=('SKIP')
 
 pkgver() {
