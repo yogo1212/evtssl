@@ -49,7 +49,7 @@ SOFTWARE.
 
 #define HOSTNAME_MAX_SIZE 255
 
-#ifndef DEPRECATEDIN_1_1_0
+#if OPENSSL_VERSION_NUMBER < 0x10101000L
 #define ASN1_STRING_get0_data ASN1_STRING_data
 #endif
 
@@ -66,7 +66,6 @@ static HostnameValidationResult matches_common_name(const char *hostname, const 
 	int common_name_loc = -1;
 	X509_NAME_ENTRY *common_name_entry = NULL;
 	ASN1_STRING *common_name_asn1 = NULL;
-	char *common_name_str = NULL;
 
 	// Find the position of the CN field in the Subject field of the certificate
 	common_name_loc = X509_NAME_get_index_by_NID(X509_get_subject_name((X509 *) server_cert), NID_commonName, -1);
@@ -89,7 +88,7 @@ static HostnameValidationResult matches_common_name(const char *hostname, const 
 		return Error;
 	}
 
-	common_name_str = (char *) ASN1_STRING_get0_data(common_name_asn1);
+	const char *common_name_str = (const char *) ASN1_STRING_get0_data(common_name_asn1);
 
 	// Make sure there isn't an embedded NUL character in the CN
 	if ((size_t)ASN1_STRING_length(common_name_asn1) != strlen(common_name_str)) {
@@ -117,26 +116,22 @@ static HostnameValidationResult matches_common_name(const char *hostname, const 
 static HostnameValidationResult matches_subject_alternative_name(const char *hostname, const X509 *server_cert)
 {
 	HostnameValidationResult result = MatchNotFound;
-	int i;
-	int san_names_nb = -1;
-	STACK_OF(GENERAL_NAME) *san_names = NULL;
 
 	// Try to extract the names within the SAN extension from the certificate
-	san_names = X509_get_ext_d2i((X509 *) server_cert, NID_subject_alt_name, NULL, NULL);
+	STACK_OF(GENERAL_NAME) *san_names = X509_get_ext_d2i((X509 *) server_cert, NID_subject_alt_name, NULL, NULL);
 
-	if (san_names == NULL) {
+	if (san_names == NULL)
 		return NoSANPresent;
-	}
 
-	san_names_nb = sk_GENERAL_NAME_num(san_names);
+	int san_names_nb = sk_GENERAL_NAME_num(san_names);
 
 	// Check each name within the extension
-	for (i = 0; i < san_names_nb; i++) {
+	for (int i = 0; i < san_names_nb; i++) {
 		const GENERAL_NAME *current_name = sk_GENERAL_NAME_value(san_names, i);
 
 		if (current_name->type == GEN_DNS) {
 			// Current name is a DNS name, let's check it
-			char *dns_name = (char *) ASN1_STRING_get0_data(current_name->d.dNSName);
+			const char *dns_name = (const char *) ASN1_STRING_get0_data(current_name->d.dNSName);
 
 			// Make sure there isn't an embedded NUL character in the DNS name
 			if ((size_t)ASN1_STRING_length(current_name->d.dNSName) != strlen(dns_name)) {
@@ -144,8 +139,7 @@ static HostnameValidationResult matches_subject_alternative_name(const char *hos
 				break;
 			}
 			else { // Compare expected hostname with the DNS name
-				if (Curl_cert_hostcheck(dns_name, hostname)
-				    == CURL_HOST_MATCH) {
+				if (Curl_cert_hostcheck(dns_name, hostname) == CURL_HOST_MATCH) {
 					result = MatchFound;
 					break;
 				}
