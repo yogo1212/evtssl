@@ -9,8 +9,6 @@
 #include <event2/dns.h>
 #include <event2/listener.h>
 
-#include "openssl_hostname_validation.h"
-
 #include "evtssl.h"
 
 enum EVT_SSL_STATE {
@@ -78,7 +76,6 @@ void evt_ssl_dont_really_ssl(evt_ssl_t *essl)
 
 static void evt_ssl_collectSSLerr(evt_ssl_t *essl, const char *prefix);
 static void evt_ssl_call_errorcb(evt_ssl_t *essl, evt_ssl_error_t error);
-static int cert_verify_callback(X509_STORE_CTX *x509_ctx, void *arg);
 
 static void ssl_dns_callback(int errcode, struct evutil_addrinfo *addr, void *ptr)
 {
@@ -209,18 +206,33 @@ static SSL *new_ssl(evt_ssl_t *essl, bool accepting)
 	SSL *ssl = SSL_new(essl->ssl_ctx);
 	if (!ssl) {
 		evt_ssl_collectSSLerr(essl, "SSL_new");
-		evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
-		return NULL;
+		goto ouch;
 	}
 
-#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 	if (!accepting) {
+#ifdef SSL_CTRL_SET_TLSEXT_HOSTNAME
 		// SNI
-		SSL_set_tlsext_host_name(ssl, essl->hostname);
-	}
+		if (!SSL_set_tlsext_host_name(ssl, essl->hostname)) {
+			evt_ssl_collectSSLerr(essl, "SSL_set_tlsext_host_name");
+			goto ouch_ssl;
+		}
 #endif
 
+		if (!SSL_set1_host(ssl, essl->hostname)) {
+			evt_ssl_collectSSLerr(essl, "SSL_set1_host");
+			goto ouch_ssl;
+		}
+	}
+
 	return ssl;
+
+ouch_ssl:
+	SSL_free(ssl);
+
+ouch:
+	evt_ssl_call_errorcb(essl, SSL_ERROR_INIT);
+
+	return NULL;
 }
 
 static struct bufferevent *new_bev(evt_ssl_t *essl, int fd, bool accepting)
@@ -418,13 +430,12 @@ bool evt_ssl_reconfigure(evt_ssl_t *essl, evt_ssl_ssl_ctx_config_cb_t cb, void *
 	SSL_CTX_set_ex_data(essl->ssl_ctx, ssl_ctx_data_index, essl);
 	SSL_CTX_set_info_callback(essl->ssl_ctx, handle_openssl_error);
 
-	/*
-	 * This does default checks AND checks whether the certificate
-	 * is actually for the host we're connecting to.
-	 */
-	SSL_CTX_set_cert_verify_callback(essl->ssl_ctx, cert_verify_callback, essl);
+	SSL_CTX_set_verify(essl->ssl_ctx, SSL_VERIFY_PEER, NULL);
 
-	SSL_CTX_set_default_verify_paths(essl->ssl_ctx);
+	if (!SSL_CTX_set_default_verify_paths(essl->ssl_ctx)) {
+		evt_ssl_collectSSLerr(essl, "SSL_CTX_set_default_verify_paths");
+		return false;
+	}
 
 	if (!cb)
 		return true;
@@ -484,83 +495,6 @@ evt_ssl_t *evt_ssl_create(
 	evt_ssl_reconfigure(essl, NULL, NULL);
 
 	return essl;
-}
-
-static int cert_verify_callback(X509_STORE_CTX *x509_ctx, void *arg)
-{
-	evt_ssl_t *essl = (evt_ssl_t *) arg;
-	HostnameValidationResult res = Error;
-
-	X509 *server_cert = NULL;
-
-	const char *res_str = NULL;
-
-	if (X509_verify_cert(x509_ctx) <= 0) {
-		res_str = X509_verify_cert_error_string(X509_STORE_CTX_get_error(x509_ctx));
-	}
-
-	server_cert = X509_STORE_CTX_get_current_cert(x509_ctx);
-
-	if (!server_cert) {
-		if (!res_str) {
-			res_str = "current cert NULL!";
-		}
-
-		goto leave;
-	}
-
-	char cert_str[512];
-
-	X509_NAME_oneline(X509_get_subject_name(server_cert), cert_str,
-		  sizeof(cert_str));
-
-	if (res_str) {
-		goto leave;
-	}
-
-
-	res = validate_hostname(essl->hostname, server_cert);
-
-	switch (res) {
-		case MatchFound:
-			break;
-
-		case MatchNotFound:
-			res_str = "MatchNotFound";
-			break;
-
-		case NoSANPresent:
-			res_str = "NoSANPresent";
-			break;
-
-		case MalformedCertificate:
-			res_str = "MalformedCertificate";
-			break;
-
-		case Error:
-			res_str = "Error";
-			break;
-
-		default:
-			res_str = "WTF!";
-			break;
-	}
-
-
-	if (res == MatchFound) {
-		return 1;
-	}
-
-leave:
-	essl->errorlen = snprintf(essl->error, sizeof(essl->error) - 1,
-		          "validating '%s' failed at '%s': '%s'", essl->hostname, server_cert ? cert_str : "", res_str);
-	essl->error[sizeof(essl->error) - 1] = '\0';
-
-	if (essl->errorcb) {
-		essl->errorcb(essl, SSL_ERROR_INIT);
-	}
-
-	return 0;
 }
 
 static void evt_ssl_call_errorcb(evt_ssl_t *essl, evt_ssl_error_t error)
